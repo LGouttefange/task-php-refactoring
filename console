@@ -1,0 +1,42 @@
+#!/usr/bin/env php
+<?php
+
+
+require __DIR__ . '/vendor/autoload.php';
+
+use App\Cli\CalculateCommissions;
+use App\Infrastructure\Http\Bin\BinListFetcher;
+use App\Infrastructure\Http\CurrencyExchange\CurrencyExchangeRateFetcher;
+use App\Service\AmountToEuroConverter;
+use App\Service\CommissionAmountCalculator;
+use GuzzleHttp\Client;
+use Symfony\Component\Cache\Adapter\FilesystemAdapter;
+use Symfony\Component\Console\Application;
+
+$application = new Application();
+
+$dotenv = new \Symfony\Component\Dotenv\Dotenv();
+$dotenv->loadEnv(__DIR__.'/.env');
+
+$binHttpClient = new Client();
+$exchangeRatesHttpClient = new Client([
+    'query' => [
+        'access_key' => $_SERVER['EXCHANGE_RATES_API_KEY'],
+    ]
+]);
+
+$application->add(new CalculateCommissions(
+    new CurrencyExchangeRateFetcher(
+        $exchangeRatesHttpClient,
+        new FilesystemAdapter(),
+    ),
+    new BinListFetcher(
+        $binHttpClient,
+        new FilesystemAdapter(),
+    ),
+    new AmountToEuroConverter(),
+    new CommissionAmountCalculator(0.01, 0.02)
+));
+
+$application->setDefaultCommand(CalculateCommissions::getDefaultName());
+$application->run();

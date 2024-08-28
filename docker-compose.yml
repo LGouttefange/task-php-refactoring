@@ -1,0 +1,9 @@
+services:
+  php:
+    build:
+      dockerfile: Dockerfile
+    volumes:
+      - ".:/srv/app"
+    command: ["sh"]
+    working_dir: /srv/app
+    tty: true
